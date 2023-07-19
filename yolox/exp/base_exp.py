@@ -26,6 +26,10 @@ class BaseExp(metaclass=ABCMeta):
     @abstractmethod
     def get_model(self) -> Module:
         pass
+    
+    @abstractmethod
+    def get_head(self) -> Module:
+        pass
 
     @abstractmethod
     def get_dataset(self, cache: bool = False, cache_type: str = "ram"):
