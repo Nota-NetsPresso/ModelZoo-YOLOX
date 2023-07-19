@@ -66,7 +66,7 @@ def main():
     logger.info("loading checkpoint done.")
     
     from yolox.models import TEMPbind
-    model_to_compress = TEMPbind(backbone=model.backbone, head=model.head) # temp_bind를 통해 이 둘을 backbone, head에 다시 저장 후 그대로 뱉어내도록 설정
+    model_to_compress = TEMPbind(backbone=model.backbone, head=model.head)
     
     _graph = fx.Tracer().trace(model_to_compress)
     traced_model = fx.GraphModule(model_to_compress, _graph)
