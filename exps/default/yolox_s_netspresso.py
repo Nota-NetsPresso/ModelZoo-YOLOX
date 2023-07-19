@@ -12,8 +12,8 @@ class Exp(MyExp):
     def __init__(self):
         super(Exp, self).__init__()
         self.exp_name = os.path.split(os.path.realpath(__file__))[1].split(".")[0]
-        self.compressed_model = "/workspace/YOLOX/obj_com.pt"
-        self.head = "/workspace/YOLOX/model_head.pt"
+        self.compressed_model = "/workspace/YOLOX_nota/obj_com.pt"
+        self.head = "/workspace/YOLOX_nota/model_head.pt"
         
     def get_model(self, sublinear=False, netspresso=False):
         if "model" not in self.__dict__:
