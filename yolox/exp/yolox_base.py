@@ -108,8 +108,8 @@ class Exp(BaseExp):
         # nms threshold
         self.nmsthre = 0.65
 
-    def get_model(self):
-        from yolox.models import YOLOX, YOLOPAFPN, YOLOXHead
+    def get_model(self, netspresso=False):
+        from yolox.models import YOLOX, YOLOPAFPN, YOLOXHead, YOLOXHead_1
 
         def init_yolo(M):
             for m in M.modules():
@@ -120,14 +120,23 @@ class Exp(BaseExp):
         if getattr(self, "model", None) is None:
             in_channels = [256, 512, 1024]
             backbone = YOLOPAFPN(self.depth, self.width, in_channels=in_channels, act=self.act)
-            head = YOLOXHead(self.num_classes, self.width, in_channels=in_channels, act=self.act)
+            head = YOLOXHead_1(self.num_classes, self.width, in_channels=in_channels, act=self.act) if netspresso else YOLOXHead(self.num_classes, self.width, in_channels=in_channels, act=self.act)
             self.model = YOLOX(backbone, head)
 
         self.model.apply(init_yolo)
         self.model.head.initialize_biases(1e-2)
         self.model.train()
         return self.model
-
+    
+    def get_head(self):
+        from yolox.models import YOLOXHead_2
+        
+        if getattr(self, "head", None) is None:
+            in_channels = [256, 512, 1024]
+            self.head = YOLOXHead_2(self.num_classes, in_channels=in_channels)
+        
+        return self.head
+        
     def get_dataset(self, cache: bool = False, cache_type: str = "ram"):
         """
         Get dataset according to cache and cache_type parameters.
