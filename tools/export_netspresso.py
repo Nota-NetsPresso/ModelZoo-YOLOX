@@ -61,15 +61,12 @@ def main():
     model.train()
     if "model" in ckpt:
         ckpt = ckpt["model"]
-    model.load_state_dict(ckpt)
+    model.load_state_dict(ckpt, strict=False)
 
     logger.info("loading checkpoint done.")
     
-    from yolox.models import TEMPbind
-    model_to_compress = TEMPbind(backbone=model.backbone, head=model.head)
-    
-    _graph = fx.Tracer().trace(model_to_compress)
-    traced_model = fx.GraphModule(model_to_compress, _graph)
+    _graph = fx.Tracer().trace(model)
+    traced_model = fx.GraphModule(model, _graph)
     torch.save(traced_model, os.path.join(args.output_path, 'model_to_compress.pt'))
     logger.info(f"generated model to compress model {os.path.join(args.output_path, 'model_to_compress.pt')}")
     
