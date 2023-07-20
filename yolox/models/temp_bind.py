@@ -17,7 +17,7 @@ class TEMPbind(nn.Module):
 
     def forward(self, x):
         # fpn output content features of [dark3, dark4, dark5]
-        x = self.backbone(x)
-        outputs = self.head(x)
+        fpn_outs = self.backbone(x)
+        outputs = self.head(fpn_outs)
         
         return outputs
