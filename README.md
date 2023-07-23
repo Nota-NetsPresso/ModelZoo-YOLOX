@@ -6,7 +6,7 @@
 
 </div>
 
-# <div align="center">NetsPresso tutorial for YOLOv5 compression</div>
+# <div align="center">NetsPresso tutorial for YOLOX compression</div>
 ## Order of the tutorial
 [0. Sign up](#0-sign-up) </br>
 [1. Install](#1-install) </br>
