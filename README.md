@@ -15,6 +15,7 @@
 [4. Conver YOLOX to _torchfx](#4-convert-yolox-to-_torchfxpt)</br>
 [5. Model compression with NetsPresso Python Package](#5-model-compression-with-netspresso-python-package)</br>
 [6. Fine-tuning the compressed model](#6-fine-tuning-the-compressed-model)</br>
+[7. Convert a compressed YOLOX model by -n](#7-convert-a-compressed-yolox-model-by--n)</br>
 
 ## 0. Sign up
 To get started with the NetsPresso Python package, you will need to sign up either at <a href="https://netspresso.ai?utm_source=git_yolo&utm_medium=text_np&utm_campaign=py_launch" target="_blank">NetsPresso</a> or <a href="https://py.netspresso.ai/?utm_source=git_yolo&utm_medium=text_py&utm_campaign=py_launch" target="_blank">PyNetsPresso</a>.
@@ -26,8 +27,8 @@ Clone repo and install [requirements.txt](https://github.com/ultralytics/yolov5/
 [**PyTorch >= 1.11, < 2.0**](https://pytorch.org/get-started/locally/).
 
 ```bash
-git clone https://github.com/Nota-NetsPresso/yolox_nota.git  # clone
-cd yolox_nota
+git clone https://github.com/Nota-NetsPresso/ModelZoo-YOLOX.git  # clone
+cd ModelZoo-YOLOX
 pip3 install -v -e .  # or  python3 setup.py develop
 ```
 </br>
@@ -161,6 +162,15 @@ You can compress and retrain other models by referring to 'yolox-s-netspresso.py
 python tools/train.py -n yolox-s-netspresso -d 8 -b 64 --fp16 -o [--cache]
 ```
 Now you can use the compressed model however you like! </br></br>
+
+## 7. Convert a compressed YOLOX model by -n</br>
+You can convert the compressed && retrained model to onnx by running the following code.
+```bash
+python3 tools/export_onnx.py --output-name yolox_s_compressed.onnx -n yolox-s-netspresso -c /best_ckpt.pth
+```
+Do you need a converter to upload to a device or a benchmarker to measure model performance?
+If you use LaunchX, you can easily convert and benchmark! </br>
+LaunchX address: https://launchx.netspresso.ai
 
 ## <div align="center">Contact</div>
 
