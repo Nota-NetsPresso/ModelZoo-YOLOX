@@ -11,6 +11,8 @@ from loguru import logger
 import torch
 import torch.backends.cudnn as cudnn
 
+from netspresso.compressor import ModelCompressor, Task, Framework, CompressionMethod, RecommendationMethod
+
 from yolox.exp import Exp, check_exp_value, get_exp
 from yolox.utils import configure_module, configure_nccl, configure_omp
 
@@ -119,3 +121,39 @@ if __name__ == "__main__":
     logger.info(f"generated model to model's head {os.path.join(exp.output_dir, exp.exp_name, exp.exp_name + '_head.pt')}")
 
     logger.info("yolox to fx graph end.")
+
+    """ 
+        Model compression - recommendation compression 
+    """
+    logger.info("Compression step start.")
+    
+    compressor = ModelCompressor(email=args.np_email, password=args.np_password)
+
+    UPLOAD_MODEL_NAME = "yolox_model"
+    TASK = Task.OBJECT_DETECTION
+    FRAMEWORK = Framework.PYTORCH
+    UPLOAD_MODEL_PATH = exp.exp_name + '_fx.pt'
+    INPUT_SHAPES = [{"batch": 1, "channel": 3, "dimension": exp.input_size}]
+    model = compressor.upload_model(
+        model_name=UPLOAD_MODEL_NAME,
+        task=TASK,
+        framework=FRAMEWORK,
+        file_path=UPLOAD_MODEL_PATH,
+        input_shapes=INPUT_SHAPES,
+    )
+
+    COMPRESSED_MODEL_NAME = "test_l2norm"
+    COMPRESSION_METHOD = CompressionMethod.PR_L2
+    RECOMMENDATION_METHOD = RecommendationMethod.SLAMP
+    RECOMMENDATION_RATIO = 0.6
+    OUTPUT_PATH = exp.exp_name + '_compressed.pt'
+    compressed_model = compressor.recommendation_compression(
+        model_id=model.model_id,
+        model_name=COMPRESSED_MODEL_NAME,
+        compression_method=COMPRESSION_METHOD,
+        recommendation_method=RECOMMENDATION_METHOD,
+        recommendation_ratio=RECOMMENDATION_RATIO,
+        output_path=OUTPUT_PATH,
+    )
+
+    logger.info("Compression step end.")
