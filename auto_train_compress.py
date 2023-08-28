@@ -15,8 +15,8 @@ from netspresso.compressor import ModelCompressor, Task, Framework, CompressionM
 
 from yolox.core import launch
 from yolox.exp import Exp, check_exp_value, get_exp
-from yolox.utils import configure_module, configure_nccl, configure_omp, get_num_devices
-
+from yolox.utils import configure_module, configure_nccl, configure_omp, get_num_devices, replace_module
+from yolox.models.network_blocks import SiLU
 
 def make_parser():
     parser = argparse.ArgumentParser("YOLOX train parser")
@@ -123,6 +123,32 @@ def make_parser():
         help="Logger to be used for metrics. \
         Implemented loggers include `tensorboard` and `wandb`.",
         default="tensorboard"
+    )
+
+    """
+        Export arguments
+    """
+    parser.add_argument(
+        "--onnx_output_name", type=str, default="yolox.onnx", help="output name of models"
+    )
+    parser.add_argument(
+        "--input", default="images", type=str, help="input node name of onnx model"
+    )
+    parser.add_argument(
+        "--output", default="output", type=str, help="output node name of onnx model"
+    )
+    parser.add_argument(
+        "--opset", default=11, type=int, help="onnx opset version"
+    )
+    parser.add_argument("--export_batch_size", type=int, default=1, help="batch size")
+    parser.add_argument(
+        "--dynamic", action="store_true", help="whether the input shape should be dynamic or not"
+    )
+    parser.add_argument("--no-onnxsim", action="store_true", help="use onnxsim or not")
+    parser.add_argument(
+        "--decode_in_inference",
+        action="store_true",
+        help="decode in inference or not"
     )
 
     return parser
@@ -257,3 +283,58 @@ if __name__ == "__main__":
     )
 
     logger.info("Fine-tining step end.")
+
+    """ 
+        Export YOLOX model to onnx
+    """
+    logger.info("Export step start.")
+    # init model
+    exp = get_exp(args.exp_file, args.name + '-netspresso')
+    check_exp_value(exp)
+    exp.merge(args.opts)
+
+    exp.compressed_model = compressed_path
+    exp.head = head_path
+    model = exp.get_model()
+    
+    # load state dict
+    ckpt_file = os.path.join(exp.output_dir, args.experiment_name, 'best_ckpt.pth')
+    if not os.path.isfile(ckpt_file):
+        ckpt_file = os.path.join(exp.output_dir, args.experiment_name, 'latest_ckpt.pth')
+    ckpt = torch.load(ckpt_file, map_location="cpu")
+
+    if "model" in ckpt:
+        ckpt = ckpt["model"]
+    model.load_state_dict(ckpt)
+
+    model.eval()
+    model = replace_module(model, torch.nn.SiLU, SiLU)
+    model.head.decode_in_inference = args.decode_in_inference
+
+    logger.info("loading checkpoint done.")
+    dummy_input = torch.randn(args.export_batch_size, 3, exp.test_size[0], exp.test_size[1])
+
+    torch.onnx._export(
+        model,
+        dummy_input,
+        args.onnx_output_name,
+        input_names=[args.input],
+        output_names=[args.output],
+        dynamic_axes={args.input: {0: 'batch'},
+                      args.output: {0: 'batch'}} if args.dynamic else None,
+        opset_version=args.opset,
+    )
+    logger.info("generated onnx model named {}".format(args.onnx_output_name))
+
+    if not args.no_onnxsim:
+        import onnx
+        from onnxsim import simplify
+
+        # use onnx-simplifier to reduce reduent model.
+        onnx_model = onnx.load(args.onnx_output_name)
+        model_simp, check = simplify(onnx_model)
+        assert check, "Simplified ONNX model could not be validated"
+        onnx.save(model_simp, args.onnx_output_name)
+        logger.info("generated simplified onnx model named {}".format(args.onnx_output_name))
+
+    logger.info("Export step end.")
