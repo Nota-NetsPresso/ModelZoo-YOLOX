@@ -13,8 +13,9 @@ import torch.backends.cudnn as cudnn
 
 from netspresso.compressor import ModelCompressor, Task, Framework, CompressionMethod, RecommendationMethod
 
+from yolox.core import launch
 from yolox.exp import Exp, check_exp_value, get_exp
-from yolox.utils import configure_module, configure_nccl, configure_omp
+from yolox.utils import configure_module, configure_nccl, configure_omp, get_num_devices
 
 
 def make_parser():
@@ -58,6 +59,70 @@ def make_parser():
         "--np_password",
         help="NetsPresso login password",
         type=str,
+    )
+
+    """
+        Fine-tuning arguments
+    """
+    parser.add_argument(
+        "--dist-backend", default="nccl", type=str, help="distributed backend"
+    )
+    parser.add_argument(
+        "--dist-url",
+        default=None,
+        type=str,
+        help="url used to set up distributed training",
+    )
+    parser.add_argument("-b", "--batch-size", type=int, default=64, help="batch size")
+    parser.add_argument(
+        "-d", "--devices", default=None, type=int, help="device for training"
+    )
+    parser.add_argument(
+        "--resume", default=False, action="store_true", help="resume training"
+    )
+    parser.add_argument("-c", "--ckpt", default=None, type=str, help="checkpoint file")
+    parser.add_argument(
+        "-e",
+        "--start_epoch",
+        default=None,
+        type=int,
+        help="resume training start epoch",
+    )
+    parser.add_argument(
+        "--num_machines", default=1, type=int, help="num of node for training"
+    )
+    parser.add_argument(
+        "--machine_rank", default=0, type=int, help="node rank for multi-node training"
+    )
+    parser.add_argument(
+        "--fp16",
+        dest="fp16",
+        default=False,
+        action="store_true",
+        help="Adopting mix precision training.",
+    )
+    parser.add_argument(
+        "--cache",
+        type=str,
+        nargs="?",
+        const="ram",
+        help="Caching imgs to ram/disk for fast training.",
+    )
+    parser.add_argument(
+        "-o",
+        "--occupy",
+        dest="occupy",
+        default=False,
+        action="store_true",
+        help="occupy GPU memory first for training.",
+    )
+    parser.add_argument(
+        "-l",
+        "--logger",
+        type=str,
+        help="Logger to be used for metrics. \
+        Implemented loggers include `tensorboard` and `wandb`.",
+        default="tensorboard"
     )
 
     return parser
@@ -156,4 +221,39 @@ if __name__ == "__main__":
         output_path=OUTPUT_PATH,
     )
 
-    logger.info("Compression step end.")
+    logger.info("Compression step end.") 
+    
+    """ 
+        Retrain YOLOX model 
+    """
+    logger.info("Fine-tuning step start.")
+    compressed_path = OUTPUT_PATH
+    head_path = exp.exp_name + '_head.pt'
+    
+    exp = get_exp(args.exp_file, args.name + '-netspresso')
+    check_exp_value(exp)
+    exp.merge(args.opts)
+
+    exp.compressed_model = compressed_path
+    exp.head = head_path
+    model = exp.get_model()
+    model.train()
+
+    num_gpu = get_num_devices() if args.devices is None else args.devices
+    assert num_gpu <= get_num_devices()
+
+    if args.cache is not None:
+        exp.dataset = exp.get_dataset(cache=True, cache_type=args.cache)
+
+    dist_url = "auto" if args.dist_url is None else args.dist_url
+    launch(
+        main,
+        num_gpu,
+        args.num_machines,
+        args.machine_rank,
+        backend=args.dist_backend,
+        dist_url=dist_url,
+        args=(exp, args),
+    )
+
+    logger.info("Fine-tining step end.")
