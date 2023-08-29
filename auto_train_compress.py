@@ -193,7 +193,7 @@ if __name__ == "__main__":
     model = exp.get_model(netspresso=True)
 
     # load the model state dict
-    ckpt = torch.load(args.weight_path, map_location="cpu")['model']
+    ckpt = torch.load(args.weight_path, map_location="cpu")
 
     model.train()
     if "model" in ckpt:
@@ -204,12 +204,12 @@ if __name__ == "__main__":
     
     _graph = torch.fx.Tracer().trace(model)
     traced_model = torch.fx.GraphModule(model, _graph)
-    torch.save(traced_model, exp.exp_name + '_fx.pt')
-    logger.info(f"generated model to compress model {os.path.join(exp.output_dir, exp.exp_name, exp.exp_name + '_fx.pt')}")
+    torch.save(traced_model, './' + exp.exp_name + '_fx.pt')
+    logger.info(f"generated model to compress model {exp.exp_name + '_fx.pt'}")
     
     head = exp.get_head()
-    torch.save(head, exp.exp_name + '_head.pt')
-    logger.info(f"generated model to model's head {os.path.join(exp.output_dir, exp.exp_name, exp.exp_name + '_head.pt')}")
+    torch.save(head, './' + exp.exp_name + '_head.pt')
+    logger.info(f"generated model to model's head {exp.exp_name + '_head.pt'}")
 
     logger.info("yolox to fx graph end.")
 
