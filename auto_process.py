@@ -99,7 +99,7 @@ def make_parser():
         dest="fp16",
         default=False,
         action="store_true",
-        help="Adopting mix precision training.",
+        help="Adopting mixed precision training.",
     )
     parser.add_argument(
         "--cache",
@@ -282,12 +282,12 @@ if __name__ == "__main__":
         args=(exp, args),
     )
 
-    logger.info("Fine-tining step end.")
+    logger.info("Fine-tuning step end.")
 
     """ 
         Export YOLOX model to onnx
     """
-    logger.info("Export step start.")
+    logger.info("Export model to onnx format step start.")
     # init model
     exp = get_exp(args.exp_file, args.name + '-netspresso')
     check_exp_value(exp)
@@ -337,4 +337,4 @@ if __name__ == "__main__":
         onnx.save(model_simp, args.onnx_output_name)
         logger.info("generated simplified onnx model named {}".format(args.onnx_output_name))
 
-    logger.info("Export step end.")
+    logger.info("Export model to onnx format step end.")
