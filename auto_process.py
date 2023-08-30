@@ -44,6 +44,23 @@ def make_parser():
         Compression arguments
     """
     parser.add_argument(
+        "--compression_method",
+        type=str,
+        choices=["PR_L2", "PR_GM", "PR_NN", "PR_ID", "FD_TK", "FD_CP", "FD_SVD"],
+        default="PR_L2"
+    )
+    parser.add_argument(
+        "--recommendation_method",
+        type=str,
+        choices=["slamp", "vbmf"],
+        default="slamp"
+    )
+    parser.add_argument(
+        "--compression_ratio",
+        type=int,
+        default=0.5
+    )
+    parser.add_argument(
         "-w",
         "--weight_path",
         type=str
@@ -128,9 +145,6 @@ def make_parser():
     """
         Export arguments
     """
-    parser.add_argument(
-        "--onnx_output_name", type=str, default="yolox.onnx", help="output name of models"
-    )
     parser.add_argument(
         "--input", default="images", type=str, help="input node name of onnx model"
     )
@@ -220,7 +234,7 @@ if __name__ == "__main__":
     
     compressor = ModelCompressor(email=args.np_email, password=args.np_password)
 
-    UPLOAD_MODEL_NAME = "yolox_model"
+    UPLOAD_MODEL_NAME = exp.exp_name
     TASK = Task.OBJECT_DETECTION
     FRAMEWORK = Framework.PYTORCH
     UPLOAD_MODEL_PATH = exp.exp_name + '_fx.pt'
@@ -233,11 +247,11 @@ if __name__ == "__main__":
         input_shapes=INPUT_SHAPES,
     )
 
-    COMPRESSED_MODEL_NAME = "test_l2norm"
-    COMPRESSION_METHOD = CompressionMethod.PR_L2
-    RECOMMENDATION_METHOD = RecommendationMethod.SLAMP
-    RECOMMENDATION_RATIO = 0.6
-    OUTPUT_PATH = exp.exp_name + '_compressed.pt'
+    COMPRESSION_METHOD = args.compression_method
+    RECOMMENDATION_METHOD = args.recommendation_method
+    RECOMMENDATION_RATIO = args.compression_ratio
+    COMPRESSED_MODEL_NAME = f'{UPLOAD_MODEL_NAME}_{COMPRESSION_METHOD}_{RECOMMENDATION_RATIO}'
+    OUTPUT_PATH = COMPRESSED_MODEL_NAME + '.pt'
     compressed_model = compressor.recommendation_compression(
         model_id=model.model_id,
         model_name=COMPRESSED_MODEL_NAME,
@@ -317,24 +331,24 @@ if __name__ == "__main__":
     torch.onnx._export(
         model,
         dummy_input,
-        args.onnx_output_name,
+        COMPRESSED_MODEL_NAME + '.onnx',
         input_names=[args.input],
         output_names=[args.output],
         dynamic_axes={args.input: {0: 'batch'},
                       args.output: {0: 'batch'}} if args.dynamic else None,
         opset_version=args.opset,
     )
-    logger.info("generated onnx model named {}".format(args.onnx_output_name))
+    logger.info("generated onnx model named {}".format(COMPRESSED_MODEL_NAME + '.onnx'))
 
     if not args.no_onnxsim:
         import onnx
         from onnxsim import simplify
 
         # use onnx-simplifier to reduce reduent model.
-        onnx_model = onnx.load(args.onnx_output_name)
+        onnx_model = onnx.load(COMPRESSED_MODEL_NAME + '.onnx')
         model_simp, check = simplify(onnx_model)
         assert check, "Simplified ONNX model could not be validated"
-        onnx.save(model_simp, args.onnx_output_name)
-        logger.info("generated simplified onnx model named {}".format(args.onnx_output_name))
+        onnx.save(model_simp, COMPRESSED_MODEL_NAME + '.onnx')
+        logger.info("generated simplified onnx model named {}".format(COMPRESSED_MODEL_NAME + '.onnx'))
 
     logger.info("Export model to onnx format step end.")
