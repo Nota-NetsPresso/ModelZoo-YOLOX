@@ -273,6 +273,7 @@ if __name__ == "__main__":
     exp = get_exp(args.exp_file, args.name + '-netspresso')
     check_exp_value(exp)
     exp.merge(args.opts)
+    exp.basic_lr_per_img *= 0.1
 
     exp.compressed_model = compressed_path
     exp.head = head_path
