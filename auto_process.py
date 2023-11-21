@@ -57,7 +57,7 @@ def make_parser():
     )
     parser.add_argument(
         "--compression_ratio",
-        type=int,
+        type=float,
         default=0.5
     )
     parser.add_argument(
